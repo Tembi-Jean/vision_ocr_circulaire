@@ -5,10 +5,13 @@ import cv2
 import numpy as np
 
 ##(1) Read and resize the original image(too big)
-img = cv2.imread("imgtest2.jpg")
+img = cv2.imread("imgbasler3.png")
 H, W = img.shape[:2]
 img = cv2.resize(img, (W//4, H//4))
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+# Appliquer une égalisation d'histogramme pour améliorer le contraste
+eq_gray = cv2.equalizeHist(gray)
 
 ## (2) Detect circles
 circles = cv2.HoughCircles(gray, method=cv2.HOUGH_GRADIENT, dp=1, minDist=3, circles=None, param1=200, param2=100, minRadius = 200, maxRadius=0 )
@@ -37,17 +40,13 @@ if circles is not None:
         cv2.circle(canvas, (x,y), r, (0, 0, 255), 3, cv2.LINE_AA)
         cv2.circle(canvas, (x,y), 3, (0,0,255), -1)
 
-    ## (5) Crop the image
-    dr = r + 20
-    croped = img[y-dr:y+dr+1, x-dr:x+dr+1].copy()
-
-    ## (6) logPolar and rotate
-    polar = cv2.logPolar(croped, (dr,dr),80, cv2.WARP_FILL_OUTLIERS )
+    ## (5) logPolar and rotate
+    polar = cv2.logPolar(img, (int(x), int(y)), 80, cv2.WARP_FILL_OUTLIERS)
     rotated = cv2.rotate(polar, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-    ## (7) Display the result
+    ## (6) Display the result
     cv2.imshow("Canvas", canvas)
-    cv2.imshow("croped", croped)
+
     cv2.imshow("polar", polar)
     cv2.imshow("rotated", rotated)
 
