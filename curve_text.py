@@ -123,6 +123,10 @@ if __name__ == "__main__":
 #"""
 import cv2  # Importe le module OpenCV pour le traitement d'images
 import numpy as np  # Importe le module NumPy pour les opérations numériques sur les tableaux
+from image_processing import *
+from image_processing import convert_to_grayscale, reduce_noise, binarize_image, enhance_contrast, morphological_operations, extract_text_regions, resize_image, preprocess_image,preprocess_and_binarize
+
+import pytesseract
 
 def read_and_resize_image(file_path, scale_factor=0.25):
     """
@@ -246,6 +250,30 @@ def logpolar_and_rotate(image, center):
         print(f"Error in logpolar_and_rotate: {e}")  # Affiche l'erreur s'il y en a une
         return None, None  # Renvoie None en cas d'erreur
 
+# Ajoutez cette fonction après les autres fonctions de votre script
+def detect_and_read_text(image):
+    """
+    Detect text in the given image using OCR.
+    Args:
+        image: Image containing text.
+    Returns:
+        Detected text.
+    """
+    try:
+        # Convertit l'image en niveaux de gris pour une meilleure détection du texte
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # Applique un filtre flou pour réduire le bruit
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+        
+        # Utilise OCR pour détecter et lire le texte dans l'image
+        text = pytesseract.image_to_string(blurred)
+        
+        return text.strip()  # Retire les espaces superflus et renvoie le texte détecté
+    except Exception as e:
+        print(f"Error in detect_and_read_text: {e}")
+        return None
+
 def main():
     try:  # Début du bloc try-except pour capturer les erreurs
         file_path = "imgbasler3.png"  # Chemin de l'image
@@ -262,13 +290,22 @@ def main():
             cv2.imshow("polar", polar)  # Affiche l'image transformée
         if rotated is not None:  # Vérifie si l'image transformée est valide
             cv2.imshow("rotated", rotated)  # Affiche l'image transformée
+        # Définir le chemin où l'image tournée sera enregistrée
+        rotated_image_path = './rotated_image.jpg'
+        # Enregistrer l'image tournée
+        cv2.imwrite(rotated_image_path, rotated)
+        preprocess_image(rotated_image_path)
+        text = detect_and_read_text(rotated)  # Détecte et lit le texte dans l'image transformée
+        if text:
+            print("Detected Text:")
+            print(text)
         cv2.waitKey()  # Attend une touche de clavier
         cv2.destroyAllWindows()  # Ferme toutes les fenêtres
+        
     except Exception as e:  # Capture les erreurs potentielles
         print(f"Error in main: {e}")  # Affiche l'erreur s'il y en a une
 
 if __name__ == "__main__":
     main()  # Appelle la fonction principale si le script est exécuté en tant que programme principal
-
-
+    
 #"""
