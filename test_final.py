@@ -1,30 +1,43 @@
 #!/usr/bin/python3
+# 2017.10.10 12:44:37 CST
+# 2017.10.10 14:08:57 CST
 import cv2
 import numpy as np
 import pytesseract
-from utiles import rotate_image
 
 # Configuration du chemin d'accès à Tesseract OCR
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Charger l'image
-img = cv2.imread("produit_basler.png")
-H, W = img.shape[:2]
-img = cv2.resize(img, (W//4, H//4))
+img = cv2.imread("produit_basler_4.png")
+
+# Obtenir la hauteur et la largeur de l'image
+W, H = img.shape[:2]
 
 # Convertir en niveaux de gris
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-# Appliquer un filtre de netteté à l'image en niveaux de gris
-sharp_img = cv2.filter2D(gray, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
+# Améliorer le contraste
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+gray = clahe.apply(gray)
 
-# Detect circles
-circles = cv2.HoughCircles(gray, method=cv2.HOUGH_GRADIENT, dp=1, minDist=3, circles=None, param1=200, param2=100, minRadius = 200, maxRadius=0 )
+# Réduire le bruit
+gray = cv2.medianBlur(gray, 5)   
 
-# make canvas
+# Définir les paramètres en fonction de la taille de l'image
+minDist = max(H, W) // 50
+param1 = 200
+param2 = 100
+minRadius = max(H, W) // 20
+maxRadius = max(H, W) // 2
+
+# Effectuer la détection de cercles avec les paramètres ajustés
+circles = cv2.HoughCircles(gray, method=cv2.HOUGH_GRADIENT, dp=1, minDist=minDist, circles=None, param1=param1, param2=param2, minRadius=minRadius, maxRadius=maxRadius)
+
+## make canvas
 canvas = img.copy()
 
-# Get the mean of centers and do offset
+## (3) Get the mean of centers and do offset
 if circles is not None:
     circles = np.intp(np.array(circles))
     x,y,r = 0,0,0
@@ -40,17 +53,15 @@ if circles is not None:
     x+=5
     y-=7
 
-    # Draw the labels in red
-    for r in range(100, r, 20):
-        cv2.circle(canvas, (x,y), r, (0, 0, 255), 3, cv2.LINE_AA)
-        cv2.circle(canvas, (x,y), 3, (0,0,255), -1)
-
-    # logPolar and rotate
-    polar = cv2.logPolar(gray, (int(x), int(y)), 120, cv2.WARP_FILL_OUTLIERS )
+    ## (5) logPolar and rotate
+    polar = cv2.logPolar(gray, (int(x), int(y)), 350, cv2.WARP_FILL_OUTLIERS )
     rotated = cv2.rotate(polar, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     # Appliquer un filtre de netteté à l'image en niveaux de gris
     sharp_img_rotated = cv2.filter2D(rotated, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
+
+    # Enregistrer l'image tournée sur votre ordinateur
+    cv2.imwrite(r"C:\Users\33745\Documents\I5\Curve_text\result.png", sharp_img_rotated)
 
     # Initialiser les coordonnées du rectangle
     roi_points = []
@@ -75,10 +86,10 @@ if circles is not None:
     while True:
         # Dessiner le rectangle de sélection sur l'image
         if len(roi_points) == 2:
-            cv2.rectangle(rotated, roi_points[0], roi_points[1], (0, 255, 0), 2)
+            cv2.rectangle(sharp_img_rotated, roi_points[0], roi_points[1], (0, 255, 0), 2)
 
         # Afficher l'image
-        cv2.imshow('image', rotated)
+        cv2.imshow('image', sharp_img_rotated)
 
         # Appuyez sur 'q' pour quitter et extraire la ROI
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -88,7 +99,7 @@ if circles is not None:
 
     # Extraire la ROI de l'image
     if len(roi_points) == 2:
-        roi = rotated[roi_points[0][1]:roi_points[1][1], roi_points[0][0]:roi_points[1][0]]
+        roi = sharp_img_rotated[roi_points[0][1]:roi_points[1][1], roi_points[0][0]:roi_points[1][0]]
         cv2.imshow('ROI', roi)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
